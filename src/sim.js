@@ -249,10 +249,20 @@ class Game {
     f.bombsActive++;
   }
   _stepBombs(dt){
-    for(let i=this.bombs.length-1;i>=0;i--){
-      const b=this.bombs[i]; b.t+=dt;
+    // advance fuse + solidity (no array mutation here)
+    for(const b of this.bombs){
+      b.t+=dt;
       if(!b.solid && (Math.round(b.owner.c)!==b.c || Math.round(b.owner.r)!==b.r)) b.solid=true;
-      if(b.t>=FUSE){ this.bombs.splice(i,1); this._explode(b); }
+    }
+    // detonate expired bombs one at a time. _explode() may chain-remove OTHER bombs
+    // from this.bombs, so we re-scan each pass instead of holding a stale index
+    // (holding an index here crashes when a chain shrinks the array mid-loop).
+    for(let guard=0; guard<this.bombs.length+64; guard++){
+      const idx=this.bombs.findIndex(b=>b.t>=FUSE);
+      if(idx<0) break;
+      const b=this.bombs[idx];
+      this.bombs.splice(idx,1);
+      this._explode(b);
     }
   }
   _blastCells(c,r,range){
