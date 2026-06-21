@@ -4,7 +4,8 @@ class FighterState extends Schema {}
 defineTypes(FighterState, {
   slot:'uint8', c:'float32', r:'float32', dir:'string',
   alive:'boolean', score:'uint32', swag:'uint8',
-  color:'uint32', name:'string', bot:'boolean'
+  color:'uint32', name:'string', bot:'boolean',
+  bombMax:'uint8', range:'uint8', speed:'float32'
 });
 
 class BombState extends Schema {}
