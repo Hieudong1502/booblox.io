@@ -39,6 +39,11 @@ class BombloxRoom extends Room {
   }
 
   tick(dt) {
+    // No humans watching? Let the room sleep: keep it alive for matchmaking but
+    // don't burn CPU running 16 bots at 20Hz with zero spectators. The sim resumes
+    // instantly when a human joins. (This is what was pushing CPU up at 0 CCU.)
+    if (this.clients.length === 0) return;
+
     this.game.step(dt);
     const s = this.state;
 
@@ -55,11 +60,22 @@ class BombloxRoom extends Room {
       fs.bombMax = f.bombMax; fs.range = f.range; fs.speed = f.speed;
     }
 
-    // bombs + powerups: small counts, rebuild each tick
-    s.bombs.splice(0);
-    for (const b of this.game.bombs) { const bs = new BombState(); bs.c = b.c; bs.r = b.r; bs.range = b.range; s.bombs.push(bs); }
-    s.powerups.splice(0);
-    for (const p of this.game.powerups) { const ps = new PowerupState(); ps.c = p.c; ps.r = p.r; ps.type = p.type; s.powerups.push(ps); }
+    // bombs + powerups change rarely (place/explode/pickup/spawn). Only rebuild the
+    // ArraySchema when the set actually changed, so we don't churn the whole array
+    // (delete-all + re-add) every tick — that churn scales with count and was a CPU
+    // / egress drain as items accumulated.
+    const bombSig = this.game.bombs.map(b => b.c + ',' + b.r + ',' + b.range).join(';');
+    if (bombSig !== this._bombSig) {
+      this._bombSig = bombSig;
+      s.bombs.splice(0);
+      for (const b of this.game.bombs) { const bs = new BombState(); bs.c = b.c; bs.r = b.r; bs.range = b.range; s.bombs.push(bs); }
+    }
+    const puSig = this.game.powerups.map(p => p.c + ',' + p.r + ',' + p.type).join(';');
+    if (puSig !== this._puSig) {
+      this._puSig = puSig;
+      s.powerups.splice(0);
+      for (const p of this.game.powerups) { const ps = new PowerupState(); ps.c = p.c; ps.r = p.r; ps.type = p.type; s.powerups.push(ps); }
+    }
   }
 
   _mkFighter(f) {
