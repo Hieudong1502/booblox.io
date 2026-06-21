@@ -125,12 +125,18 @@ class Game {
     for(const f of this.fighters){
       if(!f.alive){ if(this.now>=f.respawnAt) this._respawn(f); continue; }
       if(f.bombCd>0) f.bombCd-=dt;
-      if(f.tc==null){                 // centred on a cell -> make a decision
-        f.c=Math.round(f.c); f.r=Math.round(f.r);
-        if(f.isBot) this._botDecide(f, danger);
-        else this._humanDecide(f, danger);
+      if(f.isBot){
+        if(f.tc==null){                 // centred on a cell -> make a decision
+          f.c=Math.round(f.c); f.r=Math.round(f.r);
+          this._botDecide(f, danger);
+        }
+        this._advance(f, dt);
+      } else {
+        // human: bomb anytime; move continuously along held input (carry leftover
+        // distance into the next cell so there's no per-cell speed loss / stutter)
+        if(f.input.bomb){ this._placeBomb(f); f.input.bomb=false; }
+        this._advanceHuman(f, dt);
       }
-      this._advance(f, dt);
     }
     this._stepBombs(dt);
     this._stepFlames(dt);
@@ -145,6 +151,22 @@ class Game {
     const dc=Math.sign(tx-f.c), dr=Math.sign(ty-f.r);
     f.c+=dc*step; f.r+=dr*step;
     if(Math.abs(f.c-tx)<=step && Math.abs(f.r-ty)<=step){ f.c=tx; f.r=ty; f.tc=null; f.tr=null; }
+  }
+  // continuous movement for humans: keep stepping along the held input within the
+  // tick's distance budget, chaining cell→cell so no fractional distance is lost.
+  _advanceHuman(f, dt){
+    let budget=f.speed*dt, guard=0;
+    while(budget>1e-6 && guard++<8){
+      if(f.tc==null){
+        f.c=Math.round(f.c); f.r=Math.round(f.r);
+        const dir=f.input.dir;
+        if(!dir || !this._tryStep(f, dir)) break;   // no input or blocked → stop centred
+      }
+      const tx=f.tc, ty=f.tr;
+      const dist=Math.abs(tx-f.c)+Math.abs(ty-f.r);
+      if(dist<=budget){ budget-=dist; f.c=tx; f.r=ty; f.tc=null; f.tr=null; }
+      else { const dc=Math.sign(tx-f.c), dr=Math.sign(ty-f.r); f.c+=dc*budget; f.r+=dr*budget; budget=0; }
+    }
   }
   _tryStep(f, dir){
     const [dc,dr]=DIRS[dir]; const nc=Math.round(f.c)+dc, nr=Math.round(f.r)+dr;
