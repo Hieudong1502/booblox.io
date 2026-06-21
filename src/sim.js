@@ -11,6 +11,7 @@ const FUSE = 2.0;               // seconds before a bomb explodes
 const FLAME = 0.5;              // seconds a flame stays lethal
 const RESPAWN = 2.8;            // seconds dead before respawn
 const CRATE_TARGET = 0.22;      // fraction of free cells that should hold crates
+const POWERUP_TTL = 16;         // seconds a dropped power-up stays before despawning
 const BASE = { bombMax: 1, range: 1 };
 const SPD_BOT = 2.2, SPD_HUMAN = 3.0;
 
@@ -140,7 +141,7 @@ class Game {
     }
     this._stepBombs(dt);
     this._stepFlames(dt);
-    this._stepPickups();
+    this._stepPickups(dt);
     this.crateRegenT-=dt; if(this.crateRegenT<=0){ this.crateRegenT=1.2; this._regenCrates(); }
   }
 
@@ -296,7 +297,7 @@ class Game {
     if(owner) owner.score+=5;
     if(Math.random()<0.32){
       const type=['bomb','range','speed'][rnd(3)];
-      this.powerups.push({c,r,type});
+      this.powerups.push({c,r,type,t:0});
     }
   }
   _stepFlames(dt){
@@ -308,11 +309,12 @@ class Game {
   }
 
   // ---- powerups ----
-  _stepPickups(){
+  _stepPickups(dt){
     for(let i=this.powerups.length-1;i>=0;i--){
       const p=this.powerups[i];
       const taker=this.fighters.find(f=>f.alive&&Math.round(f.c)===p.c&&Math.round(f.r)===p.r);
-      if(taker){ this._applyPowerup(taker,p.type); taker.score+=10; this._bumpSwag(taker); this.powerups.splice(i,1); }
+      if(taker){ this._applyPowerup(taker,p.type); taker.score+=10; this._bumpSwag(taker); this.powerups.splice(i,1); continue; }
+      p.t+=dt; if(p.t>=POWERUP_TTL) this.powerups.splice(i,1);   // despawn so items can't pile up
     }
   }
   _applyPowerup(f,type){
