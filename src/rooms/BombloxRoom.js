@@ -52,6 +52,7 @@ class BombloxRoom extends Room {
       fs.c = f.c; fs.r = f.r; fs.dir = f.dir;
       fs.alive = f.alive; fs.score = f.score; fs.swag = f.swag;
       fs.name = f.name; fs.color = f.color; fs.bot = f.isBot;
+      fs.bombMax = f.bombMax; fs.range = f.range; fs.speed = f.speed;
     }
 
     // bombs + powerups: small counts, rebuild each tick
@@ -66,6 +67,7 @@ class BombloxRoom extends Room {
     fs.slot = f.slot; fs.c = f.c; fs.r = f.r; fs.dir = f.dir;
     fs.alive = f.alive; fs.score = f.score; fs.swag = f.swag;
     fs.color = f.color; fs.name = f.name; fs.bot = f.isBot;
+    fs.bombMax = f.bombMax; fs.range = f.range; fs.speed = f.speed;
     return fs;
   }
 }
