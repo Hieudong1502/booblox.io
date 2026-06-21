@@ -4,7 +4,8 @@
   "description": "Authoritative Colyseus server for Bomblox.IO",
   "main": "src/index.js",
   "scripts": {
-    "start": "node src/index.js"
+    "start": "node src/index.js",
+    "build": "echo \"no build step needed\""
   },
   "engines": {
     "node": ">=18"
