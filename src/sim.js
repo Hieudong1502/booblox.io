@@ -27,6 +27,14 @@ const COLORS = [0x3a7bd5,0xe53935,0x43c04a,0xf2c40d,0xff8f1f,0x9b59ff,0xff6fb5,
                 0x16c79a,0x6b4a2f,0x2b2f3a,0xe9eef5,0x9ad84a,0x33d6ff,0xc0392b,0x7f8c8d,0xffd23a];
 const NAMES = ['Red','Green','Yellow','Orange','Purple','Pink','Cyan','Brown',
                'Black','White','Lime','Sky','Crimson','Gray','Gold','Teal'];
+// bot nicknames (player-style, NOT colour names) — each room shuffles & hands out
+// a distinct one per slot so the leaderboard reads like real opponents
+const BOT_NAMES = ['Blaze','Pixel','Mochi','Volt','Ziggy','Rocket','Boomer','Nova',
+  'Echo','Frosty','Ghosty','Jinx','Kobo','Loki','Maple','Nitro','Onyx','Pip',
+  'Quartz','Rune','Sushi','Tango','Yeti','Zephyr','Bolt','Coco','Dash','Ember',
+  'Fizz','Goro','Hazel','Juno','Lumo','Miso','Noodle','Olive','Pebble','Sparky',
+  'Turbo','Waffle','Biscuit','Gizmo'];
+const shuffle = (a) => { for(let i=a.length-1;i>0;i--){ const j=rnd(i+1); [a[i],a[j]]=[a[j],a[i]]; } return a; };
 
 class Game {
   constructor(){
@@ -37,6 +45,7 @@ class Game {
     this.flames = [];
     this.powerups = [];
     this.crateRegenT = 1.2;
+    this._botNames = shuffle(BOT_NAMES.slice()).slice(0, CAP);  // distinct nickname per slot
     this._buildArena();
     // fill with bots; humans later replace bots via takeSeat()
     for(let s=0;s<CAP;s++){ const f=this._makeFighter(s, true);
@@ -72,7 +81,7 @@ class Game {
       alive:true, bombMax:BASE.bombMax, range:BASE.range,
       speed:isBot?SPD_BOT:SPD_HUMAN, bombsActive:0, bombCd:0,
       score:0, kills:0, swag:0, respawnAt:0,
-      color:COLORS[slot%COLORS.length], name:NAMES[slot%NAMES.length],
+      color:COLORS[slot%COLORS.length], name:this._botNames[slot%this._botNames.length],
       input:{dir:null,bomb:false} };
   }
 
@@ -109,7 +118,8 @@ class Game {
   }
   leaveSeat(sessionId){
     const f=this.fighters.find(x=>x.sessionId===sessionId);
-    if(f){ f.isBot=true; f.sessionId=null; f.speed=SPD_BOT; f.input={dir:null,bomb:false}; }
+    if(f){ f.isBot=true; f.sessionId=null; f.speed=SPD_BOT; f.input={dir:null,bomb:false};
+      f.name=this._botNames[f.slot%this._botNames.length]; }   // drop "Player###", become a bot again
   }
   setInput(sessionId, input){
     const f=this.fighters.find(x=>x.sessionId===sessionId);
