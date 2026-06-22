@@ -12,6 +12,7 @@ const FLAME = 0.5;              // seconds a flame stays lethal
 const RESPAWN = 2.8;            // seconds dead before respawn
 const CRATE_TARGET = 0.22;      // fraction of free cells that should hold crates
 const POWERUP_TTL = 16;         // seconds a dropped power-up stays before despawning
+const BOT_RESET_SEC = 150;      // periodically zero bot scores so the leaderboard stays sane
 const BASE = { bombMax: 1, range: 1 };
 const SPD_BOT = 2.2, SPD_HUMAN = 3.0;
 
@@ -45,6 +46,7 @@ class Game {
     this.flames = [];
     this.powerups = [];
     this.crateRegenT = 1.2;
+    this._botResetT = BOT_RESET_SEC;
     this._botNames = shuffle(BOT_NAMES.slice()).slice(0, CAP);  // distinct nickname per slot
     this._buildArena();
     // fill with bots; humans later replace bots via takeSeat()
@@ -105,8 +107,14 @@ class Game {
   }
   _placeAt(f,cell){ f.c=cell.c; f.r=cell.r; f.tc=null; f.tr=null; f.bombsActive=0; }
 
+  // ---- keep the leaderboard reasonable: zero every bot's score/kills ----
+  _resetBotScores(){
+    for(const f of this.fighters){ if(f.isBot){ f.score=0; f.kills=0; this._resetSwag(f); } }
+  }
+
   // ---- seat management (Colyseus room calls these) ----
   takeSeat(sessionId, name){
+    const firstHuman = this.humanCount()===0;
     const f = this.fighters.find(x=>x.isBot);
     if(!f) return null;
     f.isBot=false; f.sessionId=sessionId; f.speed=SPD_HUMAN;
@@ -114,6 +122,7 @@ class Game {
     this._spawning=f; this._placeAt(f, this._freeSpawn()); this._spawning=null;
     f.alive=true; f.bombMax=BASE.bombMax; f.range=BASE.range; f.score=0; f.kills=0; this._resetSwag(f);
     f.input={dir:null,bomb:false};
+    if(firstHuman){ this._resetBotScores(); this._botResetT=BOT_RESET_SEC; }  // fresh board for the newcomer
     return f;
   }
   leaveSeat(sessionId){
@@ -153,6 +162,7 @@ class Game {
     this._stepFlames(dt);
     this._stepPickups(dt);
     this.crateRegenT-=dt; if(this.crateRegenT<=0){ this.crateRegenT=1.2; this._regenCrates(); }
+    this._botResetT-=dt; if(this._botResetT<=0){ this._botResetT=BOT_RESET_SEC; this._resetBotScores(); }
   }
 
   _advance(f, dt){
